@@ -12,6 +12,12 @@ public class Order {
     private LocalDate date;
     private int sum;
 
+    public Order(String line, Shop shop) {
+        deserialize(line, shop);
+        if (count < id)
+            count = id;
+    }
+
     public Order(Client client) {
         this(client, LocalDate.now());
     }
@@ -67,5 +73,38 @@ public class Order {
                 ", date=" + date +
                 ", sum=" + sum +
                 '}';
+    }
+
+    public String serialize() {
+        return id + ";"
+                + client.getId() + ";"
+                + date + ";"
+                + sum
+                + serializeProducts() + "\n";
+    }
+
+    private String serializeProducts() {
+        String productsString = "";
+        for (Product product: products.keySet()) {
+            productsString = productsString + ";" + product.getId() + "~" + products.get(product);
+        }
+        return productsString;
+    }
+
+    public void deserialize(String line, Shop shop) {
+        String[] parts = line.split(";");
+        if (parts.length < 4)
+            throw new RuntimeException("Ошибка формата строки");
+        this.id = Integer.parseInt(parts[0]);
+        this.client = shop.getClient(Integer.parseInt(parts[1]));
+        this.date = LocalDate.parse(parts[2]);
+        this.sum = Integer.parseInt(parts[3]);
+        this.products = new HashMap<>();
+        for (int i = 4; i < parts.length; i++) {
+            String[] str = parts[i].split("~");
+            Product pr = shop.getProduct(Integer.parseInt(str[0]));
+            int ii = Integer.parseInt(str[1]);
+            this.products.put(pr, ii);
+        }
     }
 }

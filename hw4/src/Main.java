@@ -40,7 +40,7 @@ public class Main {
         }
         System.out.println("*****Несуществующий клиент*********");
         try {
-            Order order2 = shop.createOrder(new Client("Gerg", LocalDate.of(2010, 01,01), "3333333", Client.Gender.MALE));
+            Order order2 = shop.createOrder(new Client("Gerg", LocalDate.of(2010, 1,1), "3333333", Client.Gender.MALE));
             System.out.println(order2);
             order2.add(shop.getProducts().get(0), 5);
             System.out.println(order2);
@@ -68,6 +68,14 @@ public class Main {
             System.out.println(e.getMessage());
         }
 
+        shop.status();
+        shop.dump();
+
+        shop.clear();
+        shop.status();
+
+        shop.restore();
+        shop.status();
 
     }
 
