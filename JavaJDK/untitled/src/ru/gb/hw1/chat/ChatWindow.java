@@ -4,8 +4,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 /*
 Создать окно клиента чата. Окно должно содержать JtextField для ввода логина, пароля, IP-адреса сервера,
@@ -15,24 +17,25 @@ import java.io.IOException;
 к серверу сгруппировать на JPanel сверху экрана, а компоненты, относящиеся к отправке сообщения – на JPanel снизу
  */
 public class ChatWindow extends JFrame {
+    private static final String logFile = "chat.txt";
     private static final int WINDOW_HEIGHT = 555;
     private static final int WINDOW_WIDTH = 507;
     private static final int WINDOW_POSX = 500;
     private static final int WINDOW_POSY = 100;
     JPanel panel = new JPanel(new GridLayout(1, 2));
-    JLabel jlb1 = new JLabel("Введите логин: ");
+    JLabel jlb1 = new JLabel("Логин: ");
     JTextField jtf1 = new JTextField();
 
     JPanel panel2 = new JPanel(new GridLayout(1, 2));
-    JLabel jlb2 = new JLabel("Введите пароль: ");
+    JLabel jlb2 = new JLabel("Пароль: ");
     JTextField jtf2 = new JTextField();
 
     JPanel panel3 = new JPanel(new GridLayout(1, 2));
-    JLabel jlb3 = new JLabel("Введите IP адрес сервера: ");
+    JLabel jlb3 = new JLabel("IP адрес сервера: ");
     JTextField jtf3 = new JTextField();
 
     JPanel panel4 = new JPanel(new GridLayout(1, 2));
-    JLabel jlb4 = new JLabel("Введите номер порта: ");
+    JLabel jlb4 = new JLabel("Номер порта: ");
     JTextField jtf4 = new JTextField();
 
     JButton btnLogin = new JButton("Подключиться");
@@ -40,11 +43,9 @@ public class ChatWindow extends JFrame {
     JScrollPane scrollPane = new JScrollPane(textChat);
     JPanel panelMain = new JPanel(new GridLayout(10, 1));
 
-    JLabel jlb6 = new JLabel("Введите ваше сообщение: ");
+    JLabel jlb6 = new JLabel("Текст сообщения: ");
     JTextArea chatMessage = new JTextArea();
-    JButton pushMsg = new JButton("Отправить сообщение");
-//    String logChat = "";
-//    char[] bufferLog;
+    JButton pushMsg = new JButton("Отправить (ctrl+Enter)");
 
     public ChatWindow() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -54,6 +55,7 @@ public class ChatWindow extends JFrame {
         setResizable(true);
         setVisible(true);
 
+        panelMain.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         setLayout(new GridLayout(1, 1));
         panel.add(jlb1);
         panel.add(jtf1);
@@ -69,26 +71,83 @@ public class ChatWindow extends JFrame {
         panelMain.add(panel4);
         btnLogin.addActionListener(new ActionListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    FileInputStream fr = new FileInputStream("chat.txt");
-                    int b;
-                    while ((b = fr.read()) != -1) {
-                        textChat.append(Character.valueOf((char) b).toString());
-                    }
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
+            public void actionPerformed(ActionEvent e) {readLog();}
         });
         panelMain.add(btnLogin);
         textChat.setEditable(false);
+        textChat.setWrapStyleWord(true);
+        textChat.setLineWrap(true);
         panelMain.add(scrollPane);
 
         panelMain.add(jlb6);
+        chatMessage.setWrapStyleWord(true);
+        chatMessage.setLineWrap(true);
+        chatMessage.getActionMap().put("pressKey", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                pushMsg.getModel().setPressed(true);
+            }
+        });
+        chatMessage.getActionMap().put("sendMessage", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                actionSendMessage();
+                pushMsg.getModel().setPressed(false);
+            }
+        });
+        InputMap inputMap = chatMessage.getInputMap();
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK, false), "pressKey");
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK, true), "sendMessage");
         panelMain.add(chatMessage);
+        pushMsg.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                actionSendMessage();
+            }
+        });
         panelMain.add(pushMsg);
         add(panelMain);
 
     }
+
+    private void actionSendMessage() {
+        String message = chatMessage.getText();
+        if (message.isEmpty())
+            return;
+        message = "\n"+message;
+        writeToLog(message);
+        writeToChat(message);
+        chatMessage.setText("");
+    }
+
+    private void readLog() {
+        textChat.setText("");
+        File file = new File(logFile);
+        if ( !file.exists() || file.isDirectory() )
+            return;
+        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(logFile), StandardCharsets.UTF_8))) {
+            int b;
+            while ((b = bufferedReader.read()) != -1) {
+                textChat.append(Character.valueOf((char) b).toString());
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private void writeToLog(String message) {
+        try (FileOutputStream fw = new FileOutputStream(logFile, true)) {
+            for (byte b: message.getBytes(StandardCharsets.UTF_8)) {
+                fw.write(b);
+            }
+            fw.flush();
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+    private void writeToChat(String message) {
+        textChat.append(message);
+    }
+
 }
